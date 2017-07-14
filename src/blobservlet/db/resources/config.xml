@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xml>
+<dbconfig>
+    <dburl>jdbc:oracle:thin:@10.103.2.60:7900:ENERCON</dburl>
+    <dbuser>ENERCON</dbuser>
+    <dbpass>JkYjR66Pa9</dbpass>
+    <dbdriver>oracle.jdbc.driver.OracleDriver</dbdriver>
+    <basepath>./</basepath>
+    <sqlquery>
+SELECT
+       DISTINCT customer.customer_code || ' - ' || customer.customer_name "Customer",
+       invoice.invoice_number "Invoice Number",
+       'VOUCHER - ' || expense_report.expense_report_key "Voucher",
+       project.project_code || ' - ' || project.title "Project Title",
+       attachment.attachment_name "Attachment Name",
+       attachment.attachment_key "Attachment Key",
+       project.project_code "Project Code",
+       invoice.invoice_date "Invoice Date"
+FROM
+       customer,
+       project,
+       invoice,
+       invcd_expense,
+       expense_report,
+       expense_report_attachment,
+       attachment,
+       expense_data,
+       expense_data_allocation
+WHERE
+       invoice.invoice_date BETWEEN '%sd' AND '%ed' AND
+       invoice.invoice_key                       = invcd_expense.invoice_key AND
+       invcd_expense.expense_data_allocation_key = expense_data_allocation.expense_data_allocation_key AND
+       expense_report.expense_report_key         = expense_data.expense_report_key AND
+       expense_data.expense_data_key             = expense_data_allocation.expense_data_key AND
+       expense_data_allocation.project_key       = project.project_key AND
+       project.customer_key                      = customer.customer_key AND
+       expense_report.expense_report_key         = expense_report_attachment.expense_report_key AND
+       expense_report_attachment.attachment_key  = attachment.attachment_key
+ORDER BY
+       customer.customer_code || ' - ' || customer.customer_name,
+       invoice.invoice_number,
+       'VOUCHER - ' || expense_report.expense_report_key,
+       project.project_code || ' - ' || project.title,
+       attachment.attachment_name</sqlquery>
+       <blobquery>
+SELECT
+        customer.customer_code || ' - ' || customer.customer_name "Customer",
+        invoice.invoice_number "Invoice Number",
+        'VOUCHER - ' || expense_report.expense_report_key "Voucher",
+        project.project_code || ' - ' || project.title "Project Title",
+        attachment.attachment_name "Attachment Name",
+        attachment.attachment_key "Attachment Key",
+        invoice.invoice_date "Invoice Date",
+        attachment.attachment_data
+FROM
+        customer,
+        project,
+        invoice,
+        invcd_expense,
+        expense_report,
+        expense_report_attachment,
+        attachment,
+        expense_data,
+        expense_data_allocation
+WHERE
+        invoice.invoice_key                       = invcd_expense.invoice_key AND
+        invcd_expense.expense_data_allocation_key = expense_data_allocation.expense_data_allocation_key AND
+        expense_report.expense_report_key         = expense_data.expense_report_key AND
+        expense_data.expense_data_key             = expense_data_allocation.expense_data_key AND
+        expense_data_allocation.project_key       = project.project_key AND
+        project.customer_key                      = customer.customer_key AND
+        expense_report.expense_report_key         = expense_report_attachment.expense_report_key AND
+        expense_report_attachment.attachment_key  = attachment.attachment_key AND
+        attachment.attachment_key                IN (%keys)
+ORDER BY
+        attachment.attachment_key
+       </blobquery>
+</dbconfig>
