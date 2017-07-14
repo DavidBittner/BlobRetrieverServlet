@@ -1,6 +1,8 @@
 package blobservlet.db;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -8,16 +10,22 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import javax.servlet.http.HttpServletResponse;
+
+import org.apache.tomcat.jni.Time;
+
 import com.google.gson.Gson;
 
 import blobservlet.db.BlobSet;
 import blobservlet.db.Tree;
 
 public class QueryFactory {	
+	private final static Logger LOGGER = Logger.getLogger(Querier.class.getName());
 	static ArrayList<String[]> currentResults; 
 	
 	static String stDate;
@@ -38,7 +46,6 @@ public class QueryFactory {
 		 * Expected format: dd-MMM-yyyy
 		 * Example: 07-JAN-2017 
 		*/
-		
 		queryMaster = new Querier();
 		
 		String useQuery = Config.getQuery().replaceAll("%sd", start);
@@ -78,7 +85,7 @@ public class QueryFactory {
 	}
 	
 	//Change the FileOutputStream on line 87 to the output stream supplied by the Servlet
-	public static void WriteZip( String keys, HttpServletResponse response, boolean singleDir ) {
+	public static String CreateZip( String keys, boolean singleDir ) {
 		final String useQuery = Config.getBlobQuery().replaceAll("%keys", keys );
 		
 		Querier blobQuery = new Querier();
@@ -86,22 +93,23 @@ public class QueryFactory {
 		
 		if( blobs.size() == 0 ) {
 			System.err.println("No blobs retrieved.");
-			return;
-		}else{
-			response.addHeader("Content-Disposition","attachment;filename=\"exports.zip\"");
-			response.setContentType("application/zip");
+			return null;
 		}
+		
+		long rnow = Time.now();
+		rnow+=blobs.hashCode();
+		String sessionKey = String.format("%x", rnow);
 		
 		ZipOutputStream zipper = null;
 		try {
-			zipper = new ZipOutputStream(response.getOutputStream());
+			zipper = new ZipOutputStream(new FileOutputStream(new File(sessionKey+".zip")));
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
 				
-		long fileSize = 0;
-		
+		int counter = 0;
 		for( BlobSet i : blobs ) {
+			counter++;
 			File path = new File( i.getPath() );
 			
 			boolean accepted = false;
@@ -114,10 +122,10 @@ public class QueryFactory {
 					zipper.putNextEntry(e);
 					
 					CopyToStream(i.getBlob().getBinaryStream(), zipper);
-									
+					LOGGER.log(Level.INFO, "File written: " + combinedPath.toString());
+					LOGGER.log(Level.INFO, counter+"/"+blobs.size());
+		
 					zipper.closeEntry();
-					fileSize += e.getCompressedSize();
-
 					accepted = true;
 					
 				} catch (IOException | SQLException e) {
@@ -131,17 +139,47 @@ public class QueryFactory {
 			}
 		}
 		
-		if( blobs.size() != 0 ) {
-			response.setContentLength((int) fileSize);
-		}
-		
 		try {
 			zipper.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
 		blobQuery.closeConn();
+		
+		return sessionKey;
+	}
+	
+	public static void SendZip( String sessionid, HttpServletResponse response ) {
+		response.addHeader("Content-Disposition","attachment;filename=\"exports.zip\"");
+		response.setContentType("application/zip");
+		
+		File zipFile = new File(sessionid);
+		response.setContentLength((int)zipFile.length());  
+		
+		if( !zipFile.exists() ) {
+			LOGGER.log(Level.SEVERE, "Invalid session ID!");
+			try {
+				response.sendError(HttpServletResponse.SC_NOT_FOUND);
+			} catch (IOException e) {
+				LOGGER.log(Level.SEVERE, e.getStackTrace().toString());
+			}
+			return;
+		}else {
+			FileInputStream fileReader = null;
+			try {
+				fileReader = new FileInputStream(zipFile);
+				CopyToStream(fileReader, response.getOutputStream());
+			} catch (IOException e) {
+				//Already handled
+			} finally {
+				try {
+					fileReader.close();
+				} catch (IOException e) {
+					LOGGER.log(Level.SEVERE, "Failed to close zip file.");
+				}
+			}
+		}
+		zipFile.delete();
 	}
 	
 	public static void CopyToStream( InputStream in, OutputStream out )

@@ -106,7 +106,15 @@ public class BlobServ extends HttpServlet {
 			String keys = params.get("keys")[0];
 			
 			boolean singleDir = params.get("singleDir")[0].equals("on");
-			QueryFactory.WriteZip(keys, response, singleDir);
+			String sessionKey = QueryFactory.CreateZip(keys, singleDir);
+			
+			if( sessionKey != null ){
+				response.sendRedirect("BlobServ?sessionid="+sessionKey);
+			}
+			return;
+		}else if( params.containsKey("sessionid") ) {
+			String id = params.get("sessionid")[0];
+			QueryFactory.SendZip( id+".zip", response);
 		}else {
 			response.getWriter().write("Invalid paramater combination.");
 		}

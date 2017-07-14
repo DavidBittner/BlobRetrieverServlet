@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE xml>
 <dbconfig>
-    <dburl>jdbc:oracle:thin:@10.103.2.60:7900:ENERCON</dburl>
-    <dbuser>ENERCON</dbuser>
-    <dbpass>JkYjR66Pa9</dbpass>
+    <dburl>jdbc:oracle:thin:@optimus:1521:pdborcl.internal.unanet.com</dburl>
+    <dbuser>tsg_102</dbuser>
+    <dbpass>tsg_102</dbpass>
     <dbdriver>oracle.jdbc.driver.OracleDriver</dbdriver>
     <basepath>./</basepath>
     <sqlquery>
