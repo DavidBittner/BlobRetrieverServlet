@@ -72,7 +72,6 @@ public class QueryFactory {
 			}
 		});
 		
-		results.remove(0);
 		Tree rootNode = new Tree(null, null, null);
 		createTree( results, rootNode );
 		
@@ -257,5 +256,25 @@ public class QueryFactory {
 				createTree( data, newChild );
 			}
 		}
+	}
+	
+	public static void SingleQuery( String key, HttpServletResponse response ) {
+		Querier blobQuerier = new Querier();
+		
+		String useQuery = Config.getBlobQuery();
+		useQuery = useQuery.replace("%keys", "'"+key+"'");
+		ArrayList<BlobSet> blob = blobQuerier.queryBlobs(useQuery, true);
+		if( blob.size() == 0 ) {
+			return;
+		}
+		
+		response.addHeader("Content-Disposition", "inline;filename="+blob.get(0).getName()+";");
+		
+		try {
+			CopyToStream( blob.get(0).getBlob().getBinaryStream(), response.getOutputStream() );
+		} catch (SQLException | IOException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+		}
+		blobQuerier.closeConn();
 	}
 }

@@ -18,12 +18,7 @@ public class ResultSetProcessor {
 		
 		this.queryResults = queryResults;
 		queryMetaData = this.queryResults.getMetaData();
-		
-		results.add( new String[queryMetaData.getColumnCount()]);
-		for( int i = 0; i < queryMetaData.getColumnCount(); i++ ) {
-			results.get(0)[i] = queryMetaData.getColumnName(i+1);
-		}
-		
+				
 		while( queryResults.next() )
 		{
 			results.add( new String[queryMetaData.getColumnCount()] );

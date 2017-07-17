@@ -109,6 +109,8 @@ public class BlobServ extends HttpServlet {
 			String id = params.get("sessionid")[0];
 			QueryFactory.SendZip( getServletContext().getRealPath("") + id+".zip", response);
 			
+		}else if( params.containsKey("key")){
+			QueryFactory.SingleQuery(params.get("key")[0], response);
 		}else {
 			response.getWriter().write("Invalid paramater combination.");
 		}
