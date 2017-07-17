@@ -7,17 +7,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import javax.servlet.http.HttpServletResponse;
-
-import org.apache.tomcat.jni.Time;
 
 import com.google.gson.Gson;
 
@@ -85,24 +86,43 @@ public class QueryFactory {
 	}
 	
 	//Change the FileOutputStream on line 87 to the output stream supplied by the Servlet
-	public static String CreateZip( String keys, boolean singleDir ) {
-		final String useQuery = Config.getBlobQuery().replaceAll("%keys", keys );
+	public static String CreateZip( String keys, boolean singleDir, String inPath ) {
+		final int MAX_LIST_SIZE = 999;
 		
 		Querier blobQuery = new Querier();
-		ArrayList<BlobSet> blobs = blobQuery.queryBlobs(useQuery, singleDir);
+		ArrayList<BlobSet> blobs = new ArrayList<>();
+		
+		ArrayList<String> keyList = new ArrayList<>(Arrays.asList(keys.split(",")));
+		while( keyList.size() > 0 ) {
+			StringBuilder queryReplace = new StringBuilder("");
+			int curSize = keyList.size();
+			for( int i = 0; i < Math.min(MAX_LIST_SIZE,curSize); i++ ) {
+				queryReplace.append(keyList.get(0));
+				keyList.remove(0);
+				
+				if( i < Math.min(MAX_LIST_SIZE, curSize)-1 ) {
+					queryReplace.append(",");
+				}
+			}
+			String useQuery = Config.getBlobQuery().replaceAll("%keys", queryReplace.toString() );
+			ArrayList<BlobSet> temp = blobQuery.queryBlobs(useQuery, singleDir);
+			blobs.addAll(temp);
+		}
+		
 		
 		if( blobs.size() == 0 ) {
 			System.err.println("No blobs retrieved.");
 			return null;
 		}
 		
-		long rnow = Time.now();
-		rnow+=blobs.hashCode();
-		String sessionKey = String.format("%x", rnow);
+		Date rnow = Date.from(Instant.now());
+		String sessionKey = String.format("%x", rnow.hashCode() + keys.hashCode());
 		
 		ZipOutputStream zipper = null;
 		try {
-			zipper = new ZipOutputStream(new FileOutputStream(new File(sessionKey+".zip")));
+			zipper = new ZipOutputStream(new FileOutputStream(new File(inPath, sessionKey+".zip")));
+			LOGGER.log(Level.INFO, "Writing file to: " + inPath);
+
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
@@ -153,7 +173,8 @@ public class QueryFactory {
 		response.addHeader("Content-Disposition","attachment;filename=\"exports.zip\"");
 		response.setContentType("application/zip");
 		
-		File zipFile = new File(sessionid);
+		File zipFile = new File( sessionid );
+
 		response.setContentLength((int)zipFile.length());  
 		
 		if( !zipFile.exists() ) {
@@ -177,9 +198,9 @@ public class QueryFactory {
 				} catch (IOException e) {
 					LOGGER.log(Level.SEVERE, "Failed to close zip file.");
 				}
+				zipFile.delete();
 			}
 		}
-		zipFile.delete();
 	}
 	
 	public static void CopyToStream( InputStream in, OutputStream out )

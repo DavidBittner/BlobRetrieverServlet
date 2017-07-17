@@ -2,8 +2,8 @@
 <!DOCTYPE xml>
 <dbconfig>
     <dburl>jdbc:oracle:thin:@optimus:1521:pdborcl.internal.unanet.com</dburl>
-    <dbuser>tsg_102</dbuser>
-    <dbpass>tsg_102</dbpass>
+	<dbuser>tsg_102</dbuser>
+	<dbpass>tsg_102</dbpass>
     <dbdriver>oracle.jdbc.driver.OracleDriver</dbdriver>
     <basepath>./</basepath>
     <sqlquery>

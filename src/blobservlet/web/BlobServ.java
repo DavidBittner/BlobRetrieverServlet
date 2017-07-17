@@ -102,21 +102,34 @@ public class BlobServ extends HttpServlet {
 			
 			response.setContentType("application/json");
 			response.getWriter().write(json);
-		}else if( params.containsKey("keys") ) {
-			String keys = params.get("keys")[0];
-			
-			boolean singleDir = params.get("singleDir")[0].equals("on");
-			String sessionKey = QueryFactory.CreateZip(keys, singleDir);
-			
-			if( sessionKey != null ){
-				response.sendRedirect("BlobServ?sessionid="+sessionKey);
-			}
-			return;
 		}else if( params.containsKey("sessionid") ) {
+			Cookie downloadDone = new Cookie("querierSendFinished", "done");
+			response.addCookie(downloadDone);
+			
 			String id = params.get("sessionid")[0];
-			QueryFactory.SendZip( id+".zip", response);
+			QueryFactory.SendZip( getServletContext().getRealPath("") + id+".zip", response);
+			
 		}else {
 			response.getWriter().write("Invalid paramater combination.");
 		}
+	}
+	
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {	
+		Map<String, String[]>params = request.getParameterMap();
+		
+		if( params.containsKey("keys") && params.containsKey("singleDir")) {
+			String keys = params.get("keys")[0];
+			
+			boolean singleDir = params.get("singleDir")[0].equals("on");
+			String sessionKey = QueryFactory.CreateZip(keys, singleDir, getServletContext().getRealPath(""));
+			
+			if( sessionKey != null ){
+				response.getWriter().write(sessionKey);
+			}
+			return;
+		}else {
+			LOGGER.log(Level.SEVERE, "Failed to send session due to missing parameters.");
+		}
+		return;
 	}
 }
