@@ -142,7 +142,12 @@ public class QueryFactory {
 			File path = new File( i.getPath() );
 			
 			if( lastKey != i.getExpKey() ) {
-				String usePath = path.getParent().toString();
+				String usePath = null;
+				if(path.getParent() != null ) {
+					usePath = path.getParent().toString();
+				}else {
+					usePath = path.toString();
+				}
 				lastKey = i.getExpKey();
 
 				File reportName = new File( usePath, "Voucher "+Integer.toString(lastKey)+" report.html" );

@@ -23,22 +23,22 @@ public class Querier {
 		
 		try
         {
-            Class.forName(Config.getDriver());
-        	LOGGER.log(Level.INFO, "Starting connection to "+Config.getUrl() + ".");
-        	LOGGER.log(Level.INFO, "Username: "+Config.getUsername());
-        	LOGGER.log(Level.INFO, "Password: "+Config.getPass());
+            Class.forName(Config.getEntry("dbdriver"));
+        	LOGGER.log(Level.INFO, "Starting connection to "+Config.getEntry("dburl") + ".");
+        	LOGGER.log(Level.INFO, "Username: "+Config.getEntry("dbuser"));
+        	LOGGER.log(Level.INFO, "Password: "+Config.getEntry("dbpass"));
 
-            conn = DriverManager.getConnection(Config.getUrl(), Config.getUsername(), Config.getPass());
+            conn = DriverManager.getConnection(Config.getEntry("dburl"), Config.getEntry("dbuser"), Config.getEntry("dbpass"));
         }catch( SQLException ex )
 		{
-        	LOGGER.log(Level.SEVERE, ex.getMessage() + " " + Config.getUrl());
+        	LOGGER.log(Level.SEVERE, ex.getMessage() + " " + Config.getEntry("dburl"));
 		} catch (ClassNotFoundException ex) {
         	LOGGER.log(Level.SEVERE, "Driver not found: " + ex.getMessage());
 		}
 		
 		try {
-			treeQuery = conn.prepareStatement(Config.getQuery());
-			blobQuery = conn.prepareStatement(Config.getBlobQuery());
+			treeQuery = conn.prepareStatement(Config.getEntry("treequery"));
+			blobQuery = conn.prepareStatement(Config.getEntry("blobquery"));
 		} catch (SQLException e) {
         	LOGGER.log(Level.SEVERE, e.getMessage());
 		}
@@ -83,7 +83,7 @@ public class Querier {
 		final int VOUCHER_COL = 3;
 		
 		//Not dangerous due to SQL injection check earlier.
-		String statement = Config.getBlobQuery().replaceAll("\\?", keys);
+		String statement = Config.getEntry("blobquery").replaceAll("\\?", keys);
 		ArrayList<BlobSet> ret = new ArrayList<>();
 		try {
 			

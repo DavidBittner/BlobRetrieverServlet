@@ -1,33 +1,20 @@
 package blobservlet.db;
 
-import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.xml.sax.SAXException;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 
 public class Config {
 	static private InputStream settingsFile;
-	
-	static private String query;
-	static private String blobQuery;
-	
-	static private String url;
-	static private String pass;
-	static private String username;
-	static private String driver;
-	
-	static private String basePath;
+	static private HashMap<String, String> data;
 	
 	public Config() {
 		if( settingsFile == null ) {
 			
+			data = new HashMap<>();
 			settingsFile = QueryFactory.class.getResourceAsStream("resources/config.xml");	
 
 			if( settingsFile == null ) {
@@ -35,92 +22,62 @@ public class Config {
 				return;
 			}
 			
-			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-			Document doc = null;
+			XMLInputFactory xmlDoc = XMLInputFactory.newInstance();
 			try {
-				DocumentBuilder builder = factory.newDocumentBuilder();
-				doc = builder.parse(settingsFile);
+				XMLStreamReader xmlReader = xmlDoc.createXMLStreamReader(settingsFile);
+				while( xmlReader.hasNext() ) {
+					xmlReader.next();
+					
+					switch( xmlReader.getEventType() ) {
+						case XMLStreamReader.START_ELEMENT: {
+							addItems(xmlReader);
+							break;
+						}
+						case XMLStreamReader.END_ELEMENT: {
+							xmlReader.close();
+							return;
+						}
+					}
+				}
 				
-			} catch (ParserConfigurationException e) {
-				System.out.println("Unable to create xml parser. (You should not be seeing this)");
-			} catch (IOException e) {
-				System.out.println("Unable to read from config file.");
-			} catch (SAXException e) {
-				System.out.println("Unable to parse XML file. Format may be corrupt.");
-			}	
-			
-			doc.getDocumentElement().normalize();			
-			Element root = doc.getDocumentElement();
-			
-			setQuery(root.getElementsByTagName("sqlquery").item(0).getTextContent());
-			setBlobQuery(root.getElementsByTagName("blobquery").item(0).getTextContent());
-			
-			setBasePath(root.getElementsByTagName("basepath").item(0).getTextContent());
-			setUrl(root.getElementsByTagName("dburl").item(0).getTextContent());
-			setPass(root.getElementsByTagName("dbpass").item(0).getTextContent());
-			setDriver(root.getElementsByTagName("dbdriver").item(0).getTextContent());
-			setUsername(root.getElementsByTagName("dbuser").item(0).getTextContent());
-			
-			if( getBasePath() == null ) {
-				setBasePath("./");
-				new File(getBasePath()).mkdir();
+			} catch (XMLStreamException e) {
+				e.printStackTrace();
 			}
 		}
 	}
 
-	public static String getQuery() {
-		return query;
+	private static void addItems( XMLStreamReader in ) throws XMLStreamException {
+		String lastName = "";
+		StringBuilder curResult = new StringBuilder();
+		while(in.hasNext()) {
+			in.next();
+			
+			switch( in.getEventType() ) {
+				case XMLStreamReader.START_ELEMENT: {
+					lastName = in.getLocalName();
+					break;
+				}
+				case XMLStreamReader.CHARACTERS: {
+					curResult.append(in.getText());				
+					break;
+				}
+				case XMLStreamReader.END_ELEMENT: {
+					if( !lastName.isEmpty() ) {
+						data.put(lastName, curResult.toString().trim());
+						lastName = "";
+						curResult.setLength(0);
+					}
+				}
+			}
+		}
 	}
-
-	public static void setQuery(String query) {
-		Config.query = query;
-	}
-
-	public static String getUrl() {
-		return url;
-	}
-
-	public static void setUrl(String url) {
-		Config.url = url;
-	}
-
-	public static String getPass() {
-		return pass;
-	}
-
-	public static void setPass(String pass) {
-		Config.pass = pass;
-	}
-
-	public static String getDriver() {
-		return driver;
-	}
-
-	public static void setDriver(String driver) {
-		Config.driver = driver;
-	}
-
-	public static String getUsername() {
-		return username;
-	}
-
-	public static void setUsername(String username) {
-		Config.username = username;
-	}
-
-	public static String getBlobQuery() {
-		return blobQuery;
-	}
-
-	public static void setBlobQuery(String blobQuery) {
-		Config.blobQuery = blobQuery;
-	}
-
-	public static String getBasePath() {
-		return basePath;
-	}
-
-	public static void setBasePath(String basePath) {
-		Config.basePath = basePath;
+	
+	public static String getEntry( String name ) {
+		if( data.containsKey(name) ) {
+			return data.get(name);
+		}else {
+			System.out.println("Invalid entry name: " + name);
+			return null;
+		}
 	}
 }

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE xml>
+<!--DOCTYPE xml-->
 <dbconfig>
     <dburl>jdbc:oracle:thin:@optimus:1521:pdborcl.internal.unanet.com</dburl>
 	<dbuser>tsg_102</dbuser>
 	<dbpass>tsg_102</dbpass>
     <dbdriver>oracle.jdbc.driver.OracleDriver</dbdriver>
-    <basepath>./</basepath>
-    <sqlquery>
-SELECT
+    <companyname>Unanet</companyname>
+    <treequery>
+    SELECT
        DISTINCT customer.customer_code || ' - ' || customer.customer_name "Customer",
        invoice.invoice_number "Invoice Number",
        'VOUCHER - ' || expense_report.expense_report_key "Voucher",
@@ -41,9 +41,10 @@ ORDER BY
        invoice.invoice_number,
        'VOUCHER - ' || expense_report.expense_report_key,
        project.project_code || ' - ' || project.title,
-       attachment.attachment_name</sqlquery>
+       attachment.attachment_name
+       </treequery>
        <blobquery>
-SELECT
+       SELECT
         customer.customer_code || ' - ' || customer.customer_name "Customer",
         invoice.invoice_number "Invoice Number",
         'VOUCHER - ' || expense_report.expense_report_key "Voucher",
@@ -74,5 +75,33 @@ WHERE
         attachment.attachment_key                IN (?)
 ORDER BY
         attachment.attachment_key
-       </blobquery>
+		</blobquery>
+		<reportquery>
+SELECT    
+    project.title,    
+    expense_report.expense_report_key "VOUCHER",
+    expense_data.expense_date,    
+    person.first_name || ' ' || person.last_name "PERSON",    
+    task.task_name,    
+    expense_type.expense_type_name,    
+    expense_data.amount,   
+    project.project_code  
+FROM    
+    expense_report    
+LEFT JOIN expense_data    
+    ON expense_report.expense_report_key = expense_data.expense_report_key    
+LEFT JOIN expense_project_allocation    
+    ON expense_report.expense_report_key = expense_project_allocation.expense_report_key    
+LEFT JOIN project    
+    ON expense_project_allocation.project_key = project.project_key    
+LEFT JOIN task    
+    ON expense_project_allocation.task_key = task.task_key    
+LEFT JOIN person    
+    ON expense_report.owner_key = person.person_key    
+LEFT JOIN expense_type    
+    ON expense_type.expense_type_key = expense_data.expense_type_key    
+WHERE    
+    expense_report.expense_report_key = ?
+		</reportquery>
+
 </dbconfig>
