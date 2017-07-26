@@ -27,7 +27,7 @@ FROM
        expense_data,
        expense_data_allocation
 WHERE
-       invoice.invoice_date BETWEEN '%sd' AND '%ed' AND
+       invoice.invoice_date BETWEEN ? AND ? AND
        invoice.invoice_key                       = invcd_expense.invoice_key AND
        invcd_expense.expense_data_allocation_key = expense_data_allocation.expense_data_allocation_key AND
        expense_report.expense_report_key         = expense_data.expense_report_key AND
@@ -71,7 +71,7 @@ WHERE
         project.customer_key                      = customer.customer_key AND
         expense_report.expense_report_key         = expense_report_attachment.expense_report_key AND
         expense_report_attachment.attachment_key  = attachment.attachment_key AND
-        attachment.attachment_key                IN (%keys)
+        attachment.attachment_key                IN (?)
 ORDER BY
         attachment.attachment_key
        </blobquery>

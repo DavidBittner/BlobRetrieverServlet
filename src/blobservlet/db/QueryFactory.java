@@ -1,6 +1,7 @@
 package blobservlet.db;
 
 import java.io.File;
+import report.generator.ReportGenerator;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -34,13 +35,6 @@ public class QueryFactory {
 	
 	private static Querier queryMaster = null;
 	
-	/*
-	 * TODO: Write proper headers for file transfer
-	 * TODO: Find out how to export to JSP
-	 * TODO: Get a tomcat server running for testing
-	 * TODO: Change the query destinations in the js
-	 */
-	
 	public static String GetTree( String start, String end ) {
 		/*
 		 * Expect sanitized input here. 
@@ -49,9 +43,7 @@ public class QueryFactory {
 		*/
 		queryMaster = new Querier();
 		
-		String useQuery = Config.getQuery().replaceAll("%sd", start);
-		useQuery =  useQuery.replaceAll("%ed", end);
-		ArrayList<String[]> results = queryMaster.normalQuery( useQuery );
+		ArrayList<String[]> results = queryMaster.normalQuery( start, end );
 		if( results == null )
 		{
 			return "No results retrieved due to error.";
@@ -84,6 +76,15 @@ public class QueryFactory {
 		return json;
 	}
 	
+	private static boolean IsNumeric( String str ) {
+		for( char i : str.toCharArray() ) {
+			if( !Character.isDigit(i) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
 	//Change the FileOutputStream on line 87 to the output stream supplied by the Servlet
 	public static String CreateZip( String keys, boolean singleDir, String inPath ) {
 		final int MAX_LIST_SIZE = 999;
@@ -94,17 +95,22 @@ public class QueryFactory {
 		ArrayList<String> keyList = new ArrayList<>(Arrays.asList(keys.split(",")));
 		while( keyList.size() > 0 ) {
 			StringBuilder queryReplace = new StringBuilder("");
+			
 			int curSize = keyList.size();
 			for( int i = 0; i < Math.min(MAX_LIST_SIZE,curSize); i++ ) {
-				queryReplace.append(keyList.get(0));
+				if( !IsNumeric(keyList.get(0)) ) {
+					LOGGER.log(Level.SEVERE, "Quitting due to potential SQL injection.");
+					return "0";
+				}
+				
+				queryReplace.append("'"+keyList.get(0)+"'");
 				keyList.remove(0);
 				
 				if( i < Math.min(MAX_LIST_SIZE, curSize)-1 ) {
 					queryReplace.append(",");
 				}
 			}
-			String useQuery = Config.getBlobQuery().replaceAll("%keys", queryReplace.toString() );
-			ArrayList<BlobSet> temp = blobQuery.queryBlobs(useQuery, singleDir);
+			ArrayList<BlobSet> temp = blobQuery.queryBlobs(queryReplace.toString(), singleDir);
 			blobs.addAll(temp);
 		}
 		
@@ -115,7 +121,7 @@ public class QueryFactory {
 		}
 		
 		Date rnow = Date.from(Instant.now());
-		String sessionKey = String.format("%x", rnow.hashCode() + keys.hashCode());
+		String sessionKey = Integer.toString(rnow.hashCode()) + Integer.toString(keys.hashCode());
 		
 		ZipOutputStream zipper = null;
 		try {
@@ -127,14 +133,41 @@ public class QueryFactory {
 		}
 				
 		int counter = 0;
+		
+		//This key is used to determine what the last report written was.
+		//Used primarily so it doesn't write more than one.
+		int lastKey = -1;
 		for( BlobSet i : blobs ) {
 			counter++;
 			File path = new File( i.getPath() );
+			
+			if( lastKey != i.getExpKey() ) {
+				String usePath = path.getParent().toString();
+				lastKey = i.getExpKey();
+
+				File reportName = new File( usePath, "Voucher "+Integer.toString(lastKey)+" report.html" );
+
+				ZipEntry report = new ZipEntry(reportName.toString());
+				try {
+					zipper.putNextEntry(report);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				ReportGenerator reportGen = new ReportGenerator();
+				
+				reportGen.CreateReport(lastKey, zipper, blobQuery.getConn());
+				try {
+					zipper.closeEntry();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 			
 			boolean accepted = false;
 			for( int iter = 0; !accepted; iter++ ) {
 				try {
 					File combinedPath = new File( path.toString(), i.getName() );
+					
 					combinedPath = new File( createName(combinedPath.toString(), iter) );
 					
 					ZipEntry e = new ZipEntry(combinedPath.toString());
@@ -178,10 +211,12 @@ public class QueryFactory {
 		
 		if( !zipFile.exists() ) {
 			LOGGER.log(Level.SEVERE, "Invalid session ID!");
+			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
 			try {
-				response.sendError(HttpServletResponse.SC_NOT_FOUND);
+				response.getWriter().write("Failed.");
+				response.getWriter().close();
 			} catch (IOException e) {
-				LOGGER.log(Level.SEVERE, e.getStackTrace().toString());
+				e.printStackTrace();
 			}
 			return;
 		}else {
@@ -261,9 +296,7 @@ public class QueryFactory {
 	public static void SingleQuery( String key, HttpServletResponse response ) {
 		Querier blobQuerier = new Querier();
 		
-		String useQuery = Config.getBlobQuery();
-		useQuery = useQuery.replace("%keys", "'"+key+"'");
-		ArrayList<BlobSet> blob = blobQuerier.queryBlobs(useQuery, true);
+		ArrayList<BlobSet> blob = blobQuerier.queryBlobs("'"+key+"'", true);
 		if( blob.size() == 0 ) {
 			return;
 		}

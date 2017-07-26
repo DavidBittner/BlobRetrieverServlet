@@ -1,6 +1,7 @@
 package blobservlet.web;
 
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -34,6 +35,8 @@ public class BlobServ extends HttpServlet {
 
     //The function that is called upon a GET request
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {		
+		new Config();
+		
 		Map<String, String[]>params = request.getParameterMap();
 		Cookie[] cookies = request.getCookies();
 		
@@ -46,10 +49,14 @@ public class BlobServ extends HttpServlet {
 			for( Cookie i : cookies ) {
 				if( i.getName().equals(cookieName) ) {
 					found = true;
-					contents = i.getValue().split("%", -1);
+					contents = URLDecoder.decode(i.getValue(), "UTF-8").split("|");
 					break;
 				}
 			}
+			if( found == true ) {
+				contents = contents[2].split("^");
+			}
+			
 		}else
 		{
 			found = false;
@@ -62,7 +69,7 @@ public class BlobServ extends HttpServlet {
 			//return;
 		}else{
 			for( String i : contents ) {
-				if( i.contains("timesheetUser") ) {
+				if( i.contains("administrator") ) {
 					authed = true;
 				}
 			}
@@ -76,7 +83,6 @@ public class BlobServ extends HttpServlet {
 		}
 		
 		//By creating an instance of Config, it loads in the various settings such as DB password and usernames
-		new Config();
 		if( params.containsKey("start") && params.containsKey("end") ) {
         	LOGGER.log(Level.INFO, "Starting date query.");
 			
@@ -117,6 +123,8 @@ public class BlobServ extends HttpServlet {
 	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {	
+		new Config();
+		
 		Map<String, String[]>params = request.getParameterMap();
 		
 		if( params.containsKey("keys") && params.containsKey("singleDir")) {
