@@ -35,15 +35,24 @@ public class QueryFactory {
 	
 	private static Querier queryMaster = null;
 	
-	public static String GetTree( String start, String end ) {
-		/*
-		 * Expect sanitized input here. 
-		 * Expected format: dd-MMM-yyyy
-		 * Example: 07-JAN-2017 
-		*/
+	public static String GetTree( String start, String end, String param ) {		
 		queryMaster = new Querier();
 		
-		ArrayList<String[]> results = queryMaster.normalQuery( start, end );
+		Querier.QueryType type;
+		if( param.equals("inc") ) {
+			type = Querier.QueryType.INVOICE_QUERY;
+		}else {
+			type = Querier.QueryType.NO_INVOICE_QUERY;
+		}
+		
+		ResultSetProcessor resultProcessor = queryMaster.treeQuery( start, end, type );
+		
+		if( resultProcessor == null ) {
+			LOGGER.log(Level.SEVERE, "SQL Exception occured. ResultProcessor returned null." );
+			return "";
+		}
+		ArrayList<String[]> results = resultProcessor.getResults();
+		
 		if( results == null )
 		{
 			return "No results retrieved due to error.";
@@ -65,7 +74,7 @@ public class QueryFactory {
 		});
 		
 		Tree rootNode = new Tree(null, null, null);
-		createTree( results, rootNode );
+		createTree( resultProcessor, results, rootNode );
 		
 		Tree rooterNode = new Tree("", rootNode);
 		rootNode.setTitle("EXPORTS (Root folder)");
@@ -86,7 +95,7 @@ public class QueryFactory {
 	}
 	
 	//Change the FileOutputStream on line 87 to the output stream supplied by the Servlet
-	public static String CreateZip( String keys, boolean singleDir, String inPath ) {
+	public static String CreateZip( String keys, boolean singleDir, boolean inc, String inPath ) {
 		final int MAX_LIST_SIZE = 999;
 		
 		Querier blobQuery = new Querier();
@@ -110,7 +119,7 @@ public class QueryFactory {
 					queryReplace.append(",");
 				}
 			}
-			ArrayList<BlobSet> temp = blobQuery.queryBlobs(queryReplace.toString(), singleDir);
+			ArrayList<BlobSet> temp = blobQuery.queryBlobs(queryReplace.toString(), singleDir, inc);
 			blobs.addAll(temp);
 		}
 		
@@ -266,9 +275,9 @@ public class QueryFactory {
 		}
 	}
 	
-	static void createTree( ArrayList<String[]> data, Tree parent ) {
+	static void createTree( ResultSetProcessor resultProcessor, ArrayList<String[]> data, Tree parent ) {
 		
-		final int CAP = 5;
+		final int CAP = resultProcessor.getCapEnd();
 		
 		if( CAP == parent.getDepth() ) {
 			return;
@@ -290,10 +299,10 @@ public class QueryFactory {
 				currentAdd = row[parent.getDepth()];
 				
 				//Second parameter is the location of the key
-				Tree newChild = new Tree( currentAdd, row[CAP], parent );
+				Tree newChild = new Tree( currentAdd, row[resultProcessor.getKeyCol()], parent );
 				parent.add( newChild );
 								
-				createTree( data, newChild );
+				createTree( resultProcessor, data, newChild );
 			}
 		}
 	}
@@ -301,7 +310,7 @@ public class QueryFactory {
 	public static void SingleQuery( String key, HttpServletResponse response ) {
 		Querier blobQuerier = new Querier();
 		
-		ArrayList<BlobSet> blob = blobQuerier.queryBlobs("'"+key+"'", true);
+		ArrayList<BlobSet> blob = blobQuerier.queryBlobs("'"+key+"'", true, true);
 		if( blob.size() == 0 ) {
 			return;
 		}

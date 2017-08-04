@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import blobservlet.db.BlobSet;
@@ -15,7 +16,13 @@ public class Querier {
 	private ResultSetProcessor queryProcessor;
 	private final static Logger LOGGER = Logger.getLogger(Querier.class.getName());
 	
-	PreparedStatement treeQuery = null;
+	public enum QueryType {
+		INVOICE_QUERY,
+		NO_INVOICE_QUERY
+	}
+	
+	PreparedStatement treeQueryInvoices = null;
+	PreparedStatement treeQueryNonInvoices = null;
 	PreparedStatement blobQuery = null;
 	
 	public Querier() {
@@ -37,15 +44,28 @@ public class Querier {
 		}
 		
 		try {
-			treeQuery = conn.prepareStatement(Config.getEntry("treequery"));
-			blobQuery = conn.prepareStatement(Config.getEntry("blobquery"));
+			treeQueryInvoices    = conn.prepareStatement(Config.getEntry("treequery"));
+			treeQueryNonInvoices = conn.prepareStatement(Config.getEntry("treequery2"));
+			blobQuery            = conn.prepareStatement(Config.getEntry("blobquery"));
 		} catch (SQLException e) {
         	LOGGER.log(Level.SEVERE, e.getMessage());
 		}
 	}
 	
-	public ArrayList<String[]> normalQuery(String start, String end) {
+	public ResultSetProcessor treeQuery(String start, String end, QueryType type) {
 		try {
+			PreparedStatement treeQuery = null;
+			switch( type ) {
+				case INVOICE_QUERY: {
+					treeQuery = treeQueryInvoices;
+					break;
+				}
+				case NO_INVOICE_QUERY: {
+					treeQuery = treeQueryNonInvoices;
+					break;
+				}
+			}
+			
 			if( conn == null )
 			{
 				LOGGER.log(Level.SEVERE, "Connection object is null.");
@@ -63,7 +83,7 @@ public class Querier {
 	        queryProcessor = new ResultSetProcessor( tempSet );
 	    	LOGGER.log(Level.INFO, "Results processed.");
 
-	        return queryProcessor.getResults();
+	        return queryProcessor;
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 		}
@@ -77,25 +97,58 @@ public class Querier {
 		return null;
 	}
 	
-	public ArrayList<BlobSet> queryBlobs( String keys, boolean singleDir ) {
-		final int BLOB_COL = 8;
-		final int NAME_COL = 5;
-		final int VOUCHER_COL = 3;
+	public ArrayList<BlobSet> queryBlobs( String keys, boolean singleDir, boolean incInvoices ) {
+		int BLOB_COL = 0;
+		int NAME_COL = 0;
+		int VOUCHER_COL = 0;
+		int KEY_COL = 0;
 		
-		//Not dangerous due to SQL injection check earlier.
-		String statement = Config.getEntry("blobquery").replaceAll("\\?", keys);
+		String statement;
+		if( incInvoices ) {
+			//Not dangerous due to SQL injection check earlier.
+			statement = Config.getEntry("blobquery").replaceAll("\\?", keys);
+		}else {
+			statement = Config.getEntry("blobquery2").replaceAll("\\?", keys);
+		}
+		
 		ArrayList<BlobSet> ret = new ArrayList<>();
 		try {
 			
 			ResultSet results = conn.prepareStatement(statement).executeQuery();
+			ResultSetMetaData metaData = results.getMetaData();
+
+			for( int i = 1; i <= metaData.getColumnCount(); i++ ) {
+				switch( metaData.getColumnName(i) ) {
+					case "BLOB":
+					{
+						BLOB_COL = i;
+						break;
+					}
+					case "NAME":
+					{
+						NAME_COL = i;
+						break;
+					}
+					case "VOUCHER":
+					{
+						VOUCHER_COL = i;
+						break;
+					}
+					case "KEY":
+					{
+						KEY_COL = i;
+						break;
+					}
+				}
+			}
 			
 			String prevKey = "";
 			while( results.next() ) {
 				
-				if( results.getString(6).equals(prevKey) ) {
+				if( results.getString(KEY_COL).equals(prevKey) ) {
 					continue;
 				}else{
-					prevKey = results.getString(6);
+					prevKey = results.getString(KEY_COL);
 				}
 				
 				String name = results.getString( NAME_COL );

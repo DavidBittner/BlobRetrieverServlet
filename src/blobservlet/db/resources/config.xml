@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--DOCTYPE xml-->
+<!DOCTYPE xml>
 <dbconfig>
     <dburl>jdbc:oracle:thin:@optimus:1521:pdborcl.internal.unanet.com</dburl>
 	<dbuser>tsg_102</dbuser>
@@ -7,13 +7,13 @@
     <dbdriver>oracle.jdbc.driver.OracleDriver</dbdriver>
     <companyname>Unanet</companyname>
     <treequery>
-    SELECT
-       DISTINCT customer.customer_code || ' - ' || customer.customer_name "Customer",
+SELECT
+       DISTINCT customer.customer_code || ' - ' || customer.customer_name "START",
        invoice.invoice_number "Invoice Number",
        'VOUCHER - ' || expense_report.expense_report_key "Voucher",
        project.project_code || ' - ' || project.title "Project Title",
-       attachment.attachment_name "Attachment Name",
-       attachment.attachment_key "Attachment Key",
+       attachment.attachment_name "END",
+       attachment.attachment_key "KEY",
        project.project_code "Project Code",
        invoice.invoice_date "Invoice Date"
 FROM
@@ -43,16 +43,40 @@ ORDER BY
        project.project_code || ' - ' || project.title,
        attachment.attachment_name
        </treequery>
-       <blobquery>
-       SELECT
-        customer.customer_code || ' - ' || customer.customer_name "Customer",
+       <treequery2>
+SELECT DISTINCT
+    customer.customer_code || ' - ' || customer.customer_name "START",
+    'VOUCHER - ' || expense_report.expense_report_key "VOUCHER",
+    project.project_code || ' - ' || project.title "TITLE",
+    attachment.attachment_name "END",
+    attachment.attachment_key "KEY",
+    expense_report.post_date
+FROM
+    expense_report
+LEFT JOIN expense_data
+ON expense_report.expense_report_key = expense_data.expense_report_key
+LEFT JOIN expense_data_allocation
+ON expense_data.expense_data_key = expense_data_allocation.expense_data_key
+LEFT JOIN project
+ON expense_data_allocation.project_key = project.project_key
+LEFT JOIN customer
+ON project.customer_key = customer.customer_key
+LEFT JOIN expense_report_attachment
+ON expense_report.expense_report_key = expense_report_attachment.expense_report_key
+LEFT JOIN attachment
+ON expense_report_attachment.attachment_key  = attachment.attachment_key
+WHERE expense_report.post_date BETWEEN ? AND ?
+ORDER BY attachment.attachment_key
+		</treequery2>
+		<blobquery>
+SELECT
+        customer.customer_code || ' - ' || customer.customer_name "START",
         invoice.invoice_number "Invoice Number",
-        'VOUCHER - ' || expense_report.expense_report_key "Voucher",
-        project.project_code || ' - ' || project.title "Project Title",
-        attachment.attachment_name "Attachment Name",
-        attachment.attachment_key "Attachment Key",
-        invoice.invoice_date "Invoice Date",
-        attachment.attachment_data
+        'VOUCHER - ' || expense_report.expense_report_key "VOUCHER",
+        project.project_code || ' - ' || project.title "END",
+        attachment.attachment_name "NAME",
+        attachment.attachment_key "KEY",
+        attachment.attachment_data "BLOB"
 FROM
         customer,
         project,
@@ -76,6 +100,33 @@ WHERE
 ORDER BY
         attachment.attachment_key
 		</blobquery>
+		<blobquery2>
+SELECT
+        customer.customer_code || ' - ' || customer.customer_name "START",
+        'VOUCHER - ' || expense_report.expense_report_key "VOUCHER",
+        project.project_code || ' - ' || project.title "END",
+        attachment.attachment_name "NAME",
+        attachment.attachment_key "KEY",
+        attachment.attachment_data "BLOB"
+FROM
+        customer,
+        project,
+        expense_report,
+        expense_report_attachment,
+        attachment,
+        expense_data,
+        expense_data_allocation
+WHERE
+        expense_report.expense_report_key         = expense_data.expense_report_key AND
+        expense_data.expense_data_key             = expense_data_allocation.expense_data_key AND
+        expense_data_allocation.project_key       = project.project_key AND
+        project.customer_key                      = customer.customer_key AND
+        expense_report.expense_report_key         = expense_report_attachment.expense_report_key AND
+        expense_report_attachment.attachment_key  = attachment.attachment_key AND
+        attachment.attachment_key                IN (?)
+ORDER BY
+        attachment.attachment_key
+		</blobquery2>
 		<reportquery>
 SELECT    
     project.title,    
@@ -103,5 +154,4 @@ LEFT JOIN expense_type
 WHERE    
     expense_report.expense_report_key = ?
 		</reportquery>
-
 </dbconfig>

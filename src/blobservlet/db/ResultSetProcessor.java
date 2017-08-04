@@ -13,11 +13,25 @@ public class ResultSetProcessor {
 	private ResultSetMetaData queryMetaData = null;
 	private ArrayList<String[]> results = null;
 	
+	private int CAP_START = 0;
+	private int CAP_END = 0;
+	private int KEY_COL = 0;
+	
 	public ResultSetProcessor( ResultSet queryResults ) throws SQLException {
 		results = new ArrayList<>();
 		
 		this.queryResults = queryResults;
 		queryMetaData = this.queryResults.getMetaData();
+		
+		for( int i = 0; i < queryMetaData.getColumnCount(); i++ ) {
+			if( queryMetaData.getColumnName(i+1).equals("START") ) {
+				CAP_START = i+1;
+			}else if( queryMetaData.getColumnName(i+1).equals("END") ) {
+				CAP_END = i+1;
+			}else if( queryMetaData.getColumnName(i+1).equals("KEY") ) {
+				KEY_COL = i;
+			}
+		}
 				
 		while( queryResults.next() )
 		{
@@ -34,5 +48,15 @@ public class ResultSetProcessor {
 	public ArrayList<String[]> getResults() {
 		return results;
 	}
-
+	
+	public int getCapStart() {
+		return CAP_START;
+	}
+	public int getCapEnd() {
+		return CAP_END;
+	}
+	public int getKeyCol() {
+		return KEY_COL;
+	}
+	
 }

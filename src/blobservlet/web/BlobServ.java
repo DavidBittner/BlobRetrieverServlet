@@ -38,8 +38,8 @@ public class BlobServ extends HttpServlet {
 		new Config();
 		
 		Map<String, String[]>params = request.getParameterMap();
-		Cookie[] cookies = request.getCookies();
 		
+		Cookie[] cookies = request.getCookies();
 		boolean found = false, authed = false;
 		String cookieName = "unanetAccess";
 		String []contents = null;
@@ -82,7 +82,6 @@ public class BlobServ extends HttpServlet {
 			//return;
 		}
 		
-		//By creating an instance of Config, it loads in the various settings such as DB password and usernames
 		if( params.containsKey("start") && params.containsKey("end") ) {
         	LOGGER.log(Level.INFO, "Starting date query.");
 			
@@ -102,7 +101,7 @@ public class BlobServ extends HttpServlet {
 			
         	LOGGER.log(Level.INFO, "Dates converted.");
 
-			String json = QueryFactory.GetTree(endFormat.format(start), endFormat.format(end));
+			String json = QueryFactory.GetTree(endFormat.format(start), endFormat.format(end), params.get("incinvoice")[0]);
 			
         	LOGGER.log(Level.INFO, "JSON tree generated.");
 			
@@ -125,13 +124,16 @@ public class BlobServ extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {	
 		new Config();
 		
+		System.out.println(request.getQueryString());
 		Map<String, String[]>params = request.getParameterMap();
 		
 		if( params.containsKey("keys") && params.containsKey("singleDir")) {
 			String keys = params.get("keys")[0];
 			
 			boolean singleDir = params.get("singleDir")[0].equals("on");
-			String sessionKey = QueryFactory.CreateZip(keys, singleDir, getServletContext().getRealPath(""));
+			boolean inc = params.get("incinvoice")[0].equals("inc");
+			
+			String sessionKey = QueryFactory.CreateZip(keys, singleDir, inc, getServletContext().getRealPath(""));
 			
 			if( sessionKey != null ){
 				response.getWriter().write(sessionKey);
