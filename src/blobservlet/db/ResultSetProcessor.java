@@ -23,15 +23,18 @@ public class ResultSetProcessor {
 		this.queryResults = queryResults;
 		queryMetaData = this.queryResults.getMetaData();
 		
-		for( int i = 0; i < queryMetaData.getColumnCount(); i++ ) {
-			if( queryMetaData.getColumnName(i+1).equals("START") ) {
-				CAP_START = i+1;
-			}else if( queryMetaData.getColumnName(i+1).equals("END") ) {
-				CAP_END = i+1;
-			}else if( queryMetaData.getColumnName(i+1).equals("KEY") ) {
+		for( int i = 1; i <= queryMetaData.getColumnCount(); i++ ) {
+			if( queryMetaData.getColumnName(i).equals("START") ) {
+				CAP_START = i;
+			}else if( queryMetaData.getColumnName(i).equals("END") ) {
+				CAP_END = i;
+			}else if( queryMetaData.getColumnName(i).equals("KEY") ) {
 				KEY_COL = i;
 			}
 		}
+		System.out.println(CAP_START);
+		System.out.println(CAP_END);
+		System.out.println(KEY_COL);
 				
 		while( queryResults.next() )
 		{

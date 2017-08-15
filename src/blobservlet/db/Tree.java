@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 public class Tree {
 	String title;
+	String past;
 	String key;
 	
 	boolean isLeaf;

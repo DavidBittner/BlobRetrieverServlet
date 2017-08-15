@@ -35,6 +35,12 @@ public class QueryFactory {
 	
 	private static Querier queryMaster = null;
 	
+	//Temporary!!
+	public static void main( String []args ) {
+		new Config();
+		System.out.println(GetTree("01-JAN-2000", "01-JAN-2019", "inc"));
+	}
+	
 	public static String GetTree( String start, String end, String param ) {		
 		queryMaster = new Querier();
 		
@@ -59,20 +65,23 @@ public class QueryFactory {
 		}
 		
 		Collections.sort(results, new Comparator<String[]>() {
-			public String toSingleString( String[] in ){
-				StringBuilder str = new StringBuilder(in[0]);
-				for( int i = 1; i < in.length; i++ ) {
-					str.append("," + in[i]);
-				}
-				return str.toString();
-			}
-			
 			@Override
 			public int compare(String[] o1, String[] o2) {
-				return (toSingleString(o1).compareTo(toSingleString(o2)));
+				int keyA = Integer.parseInt(o1[resultProcessor.getKeyCol()-1]);
+				int keyB = Integer.parseInt(o2[resultProcessor.getKeyCol()-1]);
+				
+				int comp = 	o1[resultProcessor.getCapEnd()-2].compareTo(o2[resultProcessor.getCapEnd()-2]);
+				if( comp == 0 ) {
+					comp = Integer.compare(keyA, keyB);
+				}
+				
+				return comp;
 			}
 		});
 		
+		for( String []i : results ) {
+			System.out.println(Arrays.toString(i));
+		}
 		Tree rootNode = new Tree(null, null, null);
 		createTree( resultProcessor, results, rootNode );
 		
@@ -275,6 +284,15 @@ public class QueryFactory {
 		}
 	}
 	
+	static private String createPredecessor( String []row, int cur ) {
+		StringBuilder ret = new StringBuilder("");
+		for( int i = 0; i <= cur; i++ ) {
+			ret.append(row[i]);
+		}
+		
+		return ret.toString();
+	}
+	
 	static void createTree( ResultSetProcessor resultProcessor, ArrayList<String[]> data, Tree parent ) {
 		
 		final int CAP = resultProcessor.getCapEnd();
@@ -282,13 +300,14 @@ public class QueryFactory {
 		if( CAP == parent.getDepth() ) {
 			return;
 		}
-				
-		String currentAdd = "";
+		
+		String currentAdd = null;
 		boolean found = false;
+		
 		for( String []row : data ) {			
-			if( !row[parent.getDepth()].equals(currentAdd) ) {
+			if( !createPredecessor( row, parent.getDepth() ).equals(currentAdd) ) {
 				
-				if( parent.getTitle() != null && !row[parent.getDepth()-1].equals(parent.getTitle()) ) {
+				if( parent.getTitle() != null && !createPredecessor( row, parent.getDepth()-1 ).equals(parent.past) ) {
 					if( found ) {
 						return;
 					}
@@ -296,10 +315,11 @@ public class QueryFactory {
 				}
 				
 				found = true;
-				currentAdd = row[parent.getDepth()];
+				currentAdd = createPredecessor( row, parent.getDepth() );
 				
 				//Second parameter is the location of the key
-				Tree newChild = new Tree( currentAdd, row[resultProcessor.getKeyCol()], parent );
+				Tree newChild = new Tree( row[parent.getDepth()], row[resultProcessor.getKeyCol()-1], parent );
+				newChild.past = currentAdd;
 				parent.add( newChild );
 								
 				createTree( resultProcessor, data, newChild );
