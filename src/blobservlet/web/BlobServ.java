@@ -124,7 +124,6 @@ public class BlobServ extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {	
 		new Config();
 		
-		System.out.println(request.getQueryString());
 		Map<String, String[]>params = request.getParameterMap();
 		
 		if( params.containsKey("keys") && params.containsKey("singleDir")) {

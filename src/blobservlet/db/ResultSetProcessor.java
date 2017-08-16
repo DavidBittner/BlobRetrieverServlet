@@ -32,9 +32,6 @@ public class ResultSetProcessor {
 				KEY_COL = i;
 			}
 		}
-		System.out.println(CAP_START);
-		System.out.println(CAP_END);
-		System.out.println(KEY_COL);
 				
 		while( queryResults.next() )
 		{

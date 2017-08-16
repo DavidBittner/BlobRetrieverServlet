@@ -38,7 +38,6 @@ public class QueryFactory {
 	//Temporary!!
 	public static void main( String []args ) {
 		new Config();
-		System.out.println(GetTree("01-JAN-2000", "01-JAN-2019", "inc"));
 	}
 	
 	public static String GetTree( String start, String end, String param ) {		
@@ -67,10 +66,20 @@ public class QueryFactory {
 		Collections.sort(results, new Comparator<String[]>() {
 			@Override
 			public int compare(String[] o1, String[] o2) {
-				int keyA = Integer.parseInt(o1[resultProcessor.getKeyCol()-1]);
-				int keyB = Integer.parseInt(o2[resultProcessor.getKeyCol()-1]);
+				int keyA = 0;
+				int keyB = 0;
+				int comp = o1[resultProcessor.getCapEnd()-2].compareTo(o2[resultProcessor.getCapEnd()-2]);
 				
-				int comp = 	o1[resultProcessor.getCapEnd()-2].compareTo(o2[resultProcessor.getCapEnd()-2]);
+				try {
+					keyA = Integer.parseInt(o1[resultProcessor.getKeyCol()-1]);
+					keyB = Integer.parseInt(o2[resultProcessor.getKeyCol()-1]);
+				}
+				catch( NumberFormatException ex ) {
+					LOGGER.log(Level.WARNING, ex.getMessage());
+					LOGGER.log(Level.WARNING, "A: "+Integer.toString(keyA) + " B: " + Integer.toString(keyB));
+					return comp;
+				}
+				
 				if( comp == 0 ) {
 					comp = Integer.compare(keyA, keyB);
 				}
@@ -79,9 +88,6 @@ public class QueryFactory {
 			}
 		});
 		
-		for( String []i : results ) {
-			System.out.println(Arrays.toString(i));
-		}
 		Tree rootNode = new Tree(null, null, null);
 		createTree( resultProcessor, results, rootNode );
 		
