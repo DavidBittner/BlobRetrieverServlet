@@ -161,7 +161,10 @@ public class Querier {
 					}
 				}
 				Blob curBlob = results.getBlob( BLOB_COL );
-				int expKey = Integer.parseInt(results.getString(VOUCHER_COL).replace("VOUCHER - ", ""));
+				
+				String tempKey = results.getString(VOUCHER_COL);
+				int expKey = Integer.parseInt(tempKey.replace("V",""));
+				
 				ret.add( new BlobSet( name, path.toString(), curBlob, expKey ) );
 								
 			}

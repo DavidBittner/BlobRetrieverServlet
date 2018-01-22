@@ -70,10 +70,10 @@ ORDER BY attachment.attachment_key
 		</treequery2>
 		<blobquery>
 SELECT
-        customer.customer_code || ' - ' || customer.customer_name "START",
+        customer.customer_code "START",
         invoice.invoice_number "Invoice Number",
-        'VOUCHER - ' || expense_report.expense_report_key "VOUCHER",
-        project.project_code || ' - ' || project.title "END",
+        'V' || expense_report.expense_report_key "VOUCHER",
+        project.project_code "END",
         attachment.attachment_name "NAME",
         attachment.attachment_key "KEY",
         attachment.attachment_data "BLOB"
@@ -102,9 +102,9 @@ ORDER BY
 		</blobquery>
 		<blobquery2>
 SELECT
-        customer.customer_code || ' - ' || customer.customer_name "START",
-        'VOUCHER - ' || expense_report.expense_report_key "VOUCHER",
-        project.project_code || ' - ' || project.title "END",
+        customer.customer_code "START",
+        'V' || expense_report.expense_report_key "VOUCHER",
+        project.project_code "END",
         attachment.attachment_name "NAME",
         attachment.attachment_key "KEY",
         attachment.attachment_data "BLOB"
